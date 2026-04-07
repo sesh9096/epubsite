@@ -89,24 +89,27 @@ type NavHtml struct {
 }
 
 // parse navigation document
-func parseNav(f *zip.File) []byte {
+func parseNav(f *zip.File, m map[string]File) []byte {
 	buf := readZipFile(f)
 	nav_html := NavHtml{basePath: path.Dir(f.Name)}
 	if err := xml.Unmarshal(buf, &nav_html); err != nil {
 		log.Fatal(err)
 	}
-	return nav_html.printHtml()
+	return nav_html.printHtml(m)
 }
 
-func (n NavHtml) printHtml() []byte {
+func (n NavHtml) printHtml(m map[string]File) []byte {
 	wr := new(bytes.Buffer)
 	if err := template.Must(template.New("nav").
-		Funcs(map[string]any{"absolutePath": func(p string) string { return absolutePath(n.basePath, p) }}).Parse(`
+		Funcs(map[string]any{
+			"absolutePath": func(p string) string { return absolutePath(n.basePath, p) },
+			"id":           func(p string) string { return m[absolutePath(n.basePath, p)].id },
+		}).Parse(`
 {{block "list" .List}}
 <ol>
 {{range $item := .}}
 {{if $item.Span}}<li><span>{{$item.Span}}</span></li>{{end}}
-{{if $item.Link}}<li><a href="{{$item.Link.Href | absolutePath}}">{{$item.Link.Contents}}</a></li>{{end}}
+{{if $item.Link}}<li><a href="{{$item.Link.Href | absolutePath}}" id="{{$item.Link.Href | id}}">{{$item.Link.Contents}}</a></li>{{end}}
 {{if $item.List}}{{template "list" $item.List}}{{end}}
 {{end}}
 </ol>
@@ -153,7 +156,7 @@ func (n NavPoint) toListItem() ListItem {
 }
 
 // parse navigation document(ncx)
-func parseNcx(f *zip.File) []byte {
+func parseNcx(f *zip.File, m map[string]File) []byte {
 	buf := readZipFile(f)
 	ncx := Ncx{basePath: path.Dir(f.Name)}
 	if err := xml.Unmarshal(buf, &ncx); err != nil {
@@ -161,5 +164,5 @@ func parseNcx(f *zip.File) []byte {
 	}
 	nav_html := ncx.toNavHtml()
 
-	return nav_html.printHtml()
+	return nav_html.printHtml(m)
 }

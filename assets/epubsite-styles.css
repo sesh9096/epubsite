@@ -40,7 +40,6 @@ a {
 	}
 }
 
-#home-toc > ol{
-	padding: 0;
+#home-toc ol{
 	list-style-type: none;
 }

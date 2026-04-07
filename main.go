@@ -47,6 +47,7 @@ type Epub struct {
 }
 type File struct {
 	mimetype string
+	id       string
 	*zip.File
 	prev string
 	next string
@@ -95,7 +96,7 @@ func OpenEpub(filename string) Epub {
 	var cover_image, nav_path string
 	for _, item := range opf.Manifest {
 		item.Href = absolutePath(prefix, item.Href)
-		ret.Files[item.Href] = File{File: ret.Files[item.Href].File, mimetype: item.MediaType}
+		ret.Files[item.Href] = File{File: ret.Files[item.Href].File, mimetype: item.MediaType, id: item.Id}
 		id_map[item.Id] = item.Href
 		if strings.Contains(item.Properties, "nav") {
 			nav_path = item.Href
@@ -125,7 +126,7 @@ func OpenEpub(filename string) Epub {
 
 	var nav []byte
 	if opf.Version[0] == '2' {
-		nav = parseNcx(ret.Files[id_map[opf.Spine.Toc]].File)
+		nav = parseNcx(ret.Files[id_map[opf.Spine.Toc]].File, ret.Files)
 		// cover image
 	outer:
 		for _, tag := range opf.Metas {
@@ -142,7 +143,7 @@ func OpenEpub(filename string) Epub {
 		}
 	} else if opf.Version[0] == '3' {
 		// parse navigation document
-		nav = parseNav(ret.Files[nav_path].File)
+		nav = parseNav(ret.Files[nav_path].File, ret.Files)
 	} else {
 		log.Fatal("Error, unknown epub version")
 	}
@@ -220,8 +221,8 @@ func (e Epub) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			}
 			// fmt.Printf("attrs: %v\n", html.Attrs)
 			nav_links := fmt.Sprintf(`
-<nav class="epubsite-nav"><a class="previous-link" href="/%s" title="key: p">Previous</a><a class="home-link" href="/" title="key: u">Home</a><a class="next-link" href="/%s" title="key: n">Next</a></nav>
-`, file.prev, file.next)
+<nav class="epubsite-nav"><a class="previous-link" href="/%s" title="key: p">Previous</a><a class="home-link" href="/%s" title="key: u">Home</a><a class="next-link" href="/%s" title="key: n">Next</a></nav>
+`, file.prev, file.Fragment(), file.next)
 			for i, a := range html.Attrs {
 				if a.Name.Space == "xmlns" {
 					html.Attrs[i].Name = xml.Name{Local: a.Name.Space + ":" + a.Name.Local}
@@ -236,14 +237,14 @@ document.addEventListener("keydown", function (event) {
 		window.location = "/%s"
 	} else if (event.key == "u") {
 		event.preventDefault()
-		window.location = "/"
+		window.location = "/%s"
 	} else if (event.key == "n") {
 		event.preventDefault()
 		window.location = "/%s"
 	}
 })
 </script>
-`, file.prev, file.next)
+`, file.prev, file.Fragment(), file.next)
 			html.Body.Content = nav_links + html.Body.Content + nav_links
 			buf, err = xml.Marshal(html)
 			if err != nil {
@@ -272,6 +273,12 @@ document.addEventListener("keydown", function (event) {
 		}
 	}
 }
+func (f File) Fragment() string {
+	if cmdline_args.use_fragments {
+		return "#" + f.id
+	}
+	return ""
+}
 
 func absolutePath(dir, p string) string {
 	if path.IsAbs(p) {
@@ -291,9 +298,10 @@ Start a web server serving an epub file as a website
 }
 
 type CmdlineArgs struct {
-	assetdir  string
-	port      string
-	epub_path string
+	assetdir      string
+	port          string
+	use_fragments bool
+	epub_path     string
 }
 
 func (f *CmdlineArgs) Parse() {
@@ -301,6 +309,7 @@ func (f *CmdlineArgs) Parse() {
 	assetdir = path.Dir(assetdir) + "/assets/"
 	flag.StringVar(&f.assetdir, "assetdir", assetdir, "help message for flagname")
 	flag.StringVar(&f.port, "port", "19234", "port to listen on for the webserver")
+	flag.BoolVar(&f.use_fragments, "fragments", true, "whether to use url fragments to skip to toc entries")
 	flag.Parse()
 	f.epub_path = flag.Arg(0)
 }
