@@ -1,0 +1,24 @@
+#+title: Epubsite
+
+Epubsite is an epub reader which displays the specified epub as a website.
+It was build to prove that an epub is a bundled website
+** Usage:
+#+begin_src sh
+go build
+./epubsite <path/to/epub>
+#+end_src
+or 
+#+begin_src sh
+go run . <path/to/epub>
+#+end_src
+** Details
+Supports epub 2 and 3 to some extent(encryption and DRM protected files are not supported)
+
+Security: nonexistent
+
+Dependencies: Go's standard library
+
+Keybindings:
+- n :: next chapter
+- u :: home
+- p :: previous chapter

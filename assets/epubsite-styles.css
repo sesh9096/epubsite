@@ -1,0 +1,46 @@
+body {
+	background-color: black;
+	color: white;
+}
+.epubsite-nav {
+	display: flex;
+	justify-content: center;
+	gap: 1em;
+}
+a {
+	color: SkyBlue;
+}
+.epubsite-nav > a {
+	padding: 0.1em 0.5em;
+	min-width: 4em;
+	text-decoration: none;
+	text-align: center;
+	border-color: white;
+	border-style: solid;
+	border-radius: 2px;
+	border-width: 2px;
+}
+@media (min-width: 768px) {
+	body {
+	padding: 0em 1in;
+	}
+	.home-content {
+		display: flex;
+	}
+	.home-column-left {
+		margin: 1em;
+		flex-grow: 1;
+	}
+	.home-column-right {
+		margin: 1em;
+		flex-grow: 2;
+	}
+	.home-cover {
+		width: 30vw;
+	}
+}
+
+#home-toc > ol{
+	padding: 0;
+	list-style-type: none;
+}
